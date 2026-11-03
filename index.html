@@ -121,7 +121,8 @@ textarea{font:inherit;padding:9px 10px;border:1px solid #b9c9c4;border-radius:6p
 
 <section id="dash">
 <div class="top"><label id="fsw" style="flex-direction:row;align-items:center;gap:8px">Sekolah <select id="fs"></select></label>
-<label style="flex-direction:row;align-items:center;gap:8px">Bulan <select id="fb"></select></label>
+<label style="flex-direction:row;align-items:center;gap:8px">Tahun <select id="fy" style="min-width:90px"></select></label>
+<label style="flex-direction:row;align-items:center;gap:8px">Bulan <select id="fb" style="min-width:130px"></select></label>
 <button class="btn" id="pdf" type="button">Unduh PDF</button>
 <button class="btn ghost" id="csv" type="button">Unduh CSV</button></div>
 <div class="ph" id="ph"></div>
@@ -154,6 +155,7 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 const NUM = ['islam','bisaBaca','belumBaca'];
 const BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const fm = ym => BLN[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
+const MLONG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
 const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
@@ -274,21 +276,26 @@ f.onsubmit = async e => {
 
 function render() {
   if (!me) return;
-  const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sb = $('#fb'), curB = sb.value;
+  const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sy = $('#fy'), sb = $('#fb'), prevY = sy.value, prevM = sb.value;
   $('#fsw').hidden = !adm; $('#cs').hidden = !adm; $('#cg').hidden = me.role === 'guru';
   const schools = [...new Set([...rows.map(r => r.sekolah), ...(adm ? daftar : [])])].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
   sel.innerHTML = '<option value="">Semua sekolah</option>' + schools.map(s => `<option>${esc(s)}</option>`).join('');
   sel.value = schools.includes(cur) ? cur : '';
   const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value);
-  const months = [...new Set(bySchool.map(r => r.bulan))].sort().reverse();
-  sb.innerHTML = months.map(m => `<option value="${m}">${fm(m)}</option>`).join('');
-  sb.value = months.includes(curB) ? curB : (months[0] || '');
-  const data = bySchool.filter(r => r.bulan === sb.value);
+  const cy = new Date().getFullYear(), ys = rows.map(r => +r.bulan.slice(0, 4));
+  const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(cy + 1, ...ys);
+  sy.innerHTML = Array.from({ length: y1 - y0 + 1 }, (_, i) => `<option>${y1 - i}</option>`).join('');
+  sb.innerHTML = MLONG.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}">${n}</option>`).join('');
+  const init = bySchool.map(r => r.bulan).sort().pop() || new Date().toISOString().slice(0, 7);
+  sy.value = [...sy.options].some(o => o.value === prevY) ? prevY : init.slice(0, 4);
+  sb.value = prevM || init.slice(5, 7);
+  const ym = sy.value + '-' + sb.value;
+  const data = bySchool.filter(r => r.bulan === ym);
   const I = sum(data, 'islam'), B = sum(data, 'bisaBaca');
 
   $('#kpis').innerHTML = [[I, 'Siswa beragama Islam'], [B, "Bisa baca Al-Qur'an"], [I - B, 'Belum bisa baca'], [pct(B, I) + '%', 'Capaian bisa baca']]
-    .map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l}${sb.value ? ' · ' + fm(sb.value) : ''}</span></div>`).join('');
-  $('#ph').innerHTML = `Rekap Baca Al-Qur'an<small>${esc(adm ? (sel.value || 'Semua sekolah') : me.sekolah)} · ${sb.value ? fm(sb.value) : 'Semua bulan'} · dicetak ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</small>`;
+    .map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l} · ${fm(ym)}</span></div>`).join('');
+  $('#ph').innerHTML = `Rekap Baca Al-Qur'an<small>${esc(adm ? (sel.value || 'Semua sekolah') : me.sekolah)} · ${fm(ym)} · dicetak ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</small>`;
   $('#trend').innerHTML = trend(bySchool);
 
   const ks = [...new Set(data.map(r => r.kelas))].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
@@ -320,7 +327,7 @@ function render() {
     all.map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td>${act(r)}</tr>`).join('') + '</table>'
     : '<div class="empty">Belum ada data.</div>';
 }
-$('#fs').onchange = render; $('#fb').onchange = render;
+$('#fs').onchange = render; $('#fy').onchange = render; $('#fb').onchange = render;
 $('#all').onclick = async e => {
   const b = e.target.closest('button[data-k]'); if (!b) return;
   const r = rows.find(x => x.key === b.dataset.k); if (!r) return;
@@ -357,7 +364,7 @@ $('#usr').onclick = async e => {
 // ---- Unduh ----
 $('#pdf').onclick = () => {
   const t = document.title;
-  document.title = 'rekap-baca-quran-' + ($('#fb').value || 'semua');
+  document.title = 'rekap-baca-quran-' + $('#fy').value + '-' + $('#fb').value;
   toast("Di jendela cetak, pilih tujuan 'Simpan sebagai PDF'.");
   setTimeout(() => { window.print(); document.title = t; }, 300);
 };
