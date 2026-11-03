@@ -132,7 +132,7 @@ function toast(m, err) {
 }
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   document.querySelectorAll('nav button,section').forEach(e => e.classList.remove('on'));
-  b.classList.add('on'); $('#' + b.dataset.t).classList.add('on');
+  b.classList.add('on'); $('#' + b.dataset.t).classList.add('on'); if (b.dataset.t === 'dash' && API_URL) load();
 });
 
 const why = e => { const m = String(e && e.message || e);
@@ -179,11 +179,17 @@ f.onsubmit = async e => {
       localStorage.setItem('btq', JSON.stringify(rows));
     }
     try { localStorage.setItem('btq_who', JSON.stringify([d.sekolah, d.guru])); } catch (_) {}
-    const ok = await load();
-    if (API_URL && !ok)
-      return toast('Tidak bisa membaca data dari Google Sheets (' + lastErr + '). Cek deploy: akses harus "Siapa saja" dan sudah diizinkan.', 1);
-    if (API_URL && !rows.some(r => r.key === d.key && r.islam === d.islam && r.bisaBaca === d.bisaBaca))
-      return toast('Data belum tercatat di Google Sheets. Periksa deploy Apps Script (akses harus "Anyone", lihat README).', 1);
+    if (API_URL) {
+      let chk;
+      try { chk = await (await fetch(API_URL + '?key=' + encodeURIComponent(d.key))).json(); }
+      catch (e2) { return toast('Tidak bisa membaca data dari Google Sheets (' + why(e2) + '). Cek deploy: akses harus "Siapa saja" dan sudah diizinkan.', 1); }
+      const hit = Array.isArray(chk) && chk.find(r => r.key === d.key && +r.islam === d.islam && +r.bisaBaca === d.bisaBaca);
+      if (!hit)
+        return toast('Data belum tercatat di Google Sheets. Periksa deploy Apps Script (akses harus "Anyone", lihat README).', 1);
+      const i = rows.findIndex(r => r.key === d.key);
+      i >= 0 ? rows[i] = d : rows.push(d);
+      render();
+    } else await load();
     toast('Data tersimpan.');
     ['kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = ''); calc();
   } catch (err) {
