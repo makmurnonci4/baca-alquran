@@ -159,7 +159,7 @@ const MLONG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
 const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
-let me = null, token = '', rows = [], gurus = [], daftar = [];
+let me = null, token = '', rows = [], gurus = [], daftar = [], agg = [], serverBulan = '';
 try { token = localStorage.getItem('btq_tk') || ''; me = JSON.parse(localStorage.getItem('btq_me') || 'null'); } catch (_) {}
 
 const why = e => { const m = String(e && e.message || e);
@@ -234,7 +234,7 @@ $('#fd').onsubmit = async e => {
   } catch (err) { toast(why(err), 1); }
 };
 function keluar() {
-  me = null; token = ''; rows = []; gurus = [];
+  me = null; token = ''; rows = []; gurus = []; agg = [];
   try { localStorage.removeItem('btq_tk'); localStorage.removeItem('btq_me'); } catch (_) {}
   $('#who').innerHTML = ''; $('#nav').innerHTML = ''; show('auth'); loadSekolah();
 }
@@ -250,9 +250,11 @@ async function start() {
 }
 async function loadData() {
   try {
-    const j = await api('data'); rows = j.data; gurus = j.guru || [];
+    const ym0 = $('#fy').value && $('#fb').value ? $('#fy').value + '-' + $('#fb').value : '';
+    const j = await api('data', me.role === 'admin' ? { bulan: ym0 } : {}); rows = j.data; gurus = j.guru || []; agg = j.agg || []; serverBulan = j.bulan || '';
     if (me.role === 'admin') daftar = (await api('sekolah')).sekolah;
     rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = String(r.bulan).slice(0, 7); });
+    agg.forEach(r => { r.bulan = String(r.bulan).slice(0, 7); });
   } catch (e) { rows = []; if (me) toast(why(e), 1); }
   render();
 }
@@ -276,17 +278,17 @@ f.onsubmit = async e => {
 
 function render() {
   if (!me) return;
-  const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sy = $('#fy'), sb = $('#fb'), prevY = sy.value, prevM = sb.value;
+  const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sy = $('#fy'), sb = $('#fb'), prevY = sy.value, prevM = sb.value, src = adm ? agg : rows;
   $('#fsw').hidden = !adm; $('#cs').hidden = !adm; $('#cg').hidden = me.role === 'guru';
-  const schools = [...new Set([...rows.map(r => r.sekolah), ...(adm ? daftar : [])])].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
+  const schools = [...new Set([...src.map(r => r.sekolah), ...(adm ? daftar : [])])].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
   sel.innerHTML = '<option value="">Semua sekolah</option>' + schools.map(s => `<option>${esc(s)}</option>`).join('');
   sel.value = schools.includes(cur) ? cur : '';
-  const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value);
-  const cy = new Date().getFullYear(), ys = rows.map(r => +r.bulan.slice(0, 4));
+  const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value), tr = src.filter(r => !sel.value || r.sekolah === sel.value);
+  const cy = new Date().getFullYear(), ys = src.map(r => +r.bulan.slice(0, 4));
   const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(2035, ...ys);
   sy.innerHTML = Array.from({ length: y1 - y0 + 1 }, (_, i) => `<option>${y1 - i}</option>`).join('');
   sb.innerHTML = MLONG.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}">${n}</option>`).join('');
-  const init = bySchool.map(r => r.bulan).sort().pop() || new Date().toISOString().slice(0, 7);
+  const init = (adm && serverBulan) || tr.map(r => r.bulan).sort().pop() || new Date().toISOString().slice(0, 7);
   sy.value = [...sy.options].some(o => o.value === prevY) ? prevY : init.slice(0, 4);
   sb.value = prevM || init.slice(5, 7);
   const ym = sy.value + '-' + sb.value;
@@ -296,7 +298,7 @@ function render() {
   $('#kpis').innerHTML = [[I, 'Siswa beragama Islam'], [B, "Bisa baca Al-Qur'an"], [I - B, 'Belum bisa baca'], [pct(B, I) + '%', 'Capaian bisa baca']]
     .map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l} · ${fm(ym)}</span></div>`).join('');
   $('#ph').innerHTML = `Rekap Baca Al-Qur'an<small>${esc(adm ? (sel.value || 'Semua sekolah') : me.sekolah)} · ${fm(ym)} · dicetak ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</small>`;
-  $('#trend').innerHTML = trend(bySchool);
+  $('#trend').innerHTML = trend(tr);
 
   const ks = [...new Set(data.map(r => r.kelas))].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
   $('#kelas').innerHTML = ks.length ? ks.map(k => {
@@ -306,11 +308,11 @@ function render() {
 
   const gl = gurus.filter(g => !sel.value || g.sekolah === sel.value);
   $('#gur').innerHTML = gl.length ? `<table><tr><th>Guru<th>Sekolah<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th>Capaian<th class="n">%</tr>` +
-    gl.map(g => {
+    gl.slice(0, 300).map(g => {
       const x = data.filter(r => String(r.username) === g.username), i = sum(x, 'islam'), b = sum(x, 'bisaBaca');
       return x.length ? `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td>${esc(x.map(r => r.kelas).join(', '))}<td class="n">${i}<td class="n">${b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`
         : `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td colspan="5" class="mut">Belum mengisi pada bulan ini</tr>`;
-    }).join('') + '</table>' : '<div class="empty">Belum ada guru yang terdaftar.</div>';
+    }).join('') + '</table>' + (gl.length > 300 ? `<p class="hint">Menampilkan 300 dari ${gl.length} guru. Pilih sekolah untuk melihat semua.</p>` : '') : '<div class="empty">Belum ada guru yang terdaftar.</div>';
 
   const ss = schools.filter(s => !sel.value || s === sel.value);
   $('#sek').innerHTML = ss.length ? `<table><tr><th>Sekolah<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
@@ -324,10 +326,10 @@ function render() {
   const act = r => me.role === 'guru' ? btn(r, 'edit', 'Edit') + ' ' + btn(r, 'del', 'Hapus') : adm ? btn(r, 'del', 'Hapus') : '';
   const all = [...bySchool].sort((a, b) => b.bulan.localeCompare(a.bulan));
   $('#all').innerHTML = all.length ? `<table><tr><th>Bulan<th>Sekolah<th>Guru<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th></tr>` +
-    all.map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td>${act(r)}</tr>`).join('') + '</table>'
+    all.slice(0, 300).map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td>${act(r)}</tr>`).join('') + '</table>' + (all.length > 300 ? `<p class="hint">Menampilkan 300 dari ${all.length} data. Pilih sekolah untuk mempersempit.</p>` : '')
     : '<div class="empty">Belum ada data.</div>';
 }
-$('#fs').onchange = render; $('#fy').onchange = render; $('#fb').onchange = render;
+$('#fs').onchange = render; $('#fy').onchange = $('#fb').onchange = () => me.role === 'admin' ? loadData() : render();
 $('#all').onclick = async e => {
   const b = e.target.closest('button[data-k]'); if (!b) return;
   const r = rows.find(x => x.key === b.dataset.k); if (!r) return;
