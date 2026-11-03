@@ -162,10 +162,10 @@ const ymNow = () => { const d = new Date(); return d.getFullYear() + '-' + Strin
 // Google Sheets sering mengubah "2026-11" menjadi tanggal; kembalikan ke "YYYY-MM" dengan zona waktu lokal
 const normBulan = v => {
   const t = String(v == null ? '' : v).trim();
-  if (/^\d{4}-\d{2}$/.test(t)) return t;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t.slice(0, 7);
+  if (/^\d{4}-(0[1-9]|1[0-2])$/.test(t)) return t;
+  if (/^\d{4}-(0[1-9]|1[0-2])-\d{2}$/.test(t)) return t.slice(0, 7);
   const d = new Date(t);
-  return isNaN(d) ? t.slice(0, 7) : d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return t && !isNaN(d) ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') : '';
 };
 const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
 const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
@@ -269,6 +269,10 @@ async function loadData() {
     if (me.role === 'admin') daftar = (await api('sekolah')).sekolah;
     rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = normBulan(r.bulan); });
     agg.forEach(r => { r.bulan = normBulan(r.bulan); });
+    const bad = rows.filter(r => !r.bulan).length + agg.filter(r => !r.bulan).length;
+    rows = rows.filter(r => r.bulan); agg = agg.filter(r => r.bulan);
+    serverBulan = normBulan(serverBulan);
+    if (bad) toast(bad + ' baris data diabaikan karena kolom bulan di Sheet tidak valid. Periksa Google Sheet.', 1);
   } catch (e) { if (seq !== loadSeq) return; rows = []; agg = []; if (me) toast(why(e), 1); }
   render();
 }
@@ -300,13 +304,15 @@ function render() {
   sel.innerHTML = '<option value="">Semua sekolah</option>' + schools.map(s => `<option>${esc(s)}</option>`).join('');
   sel.value = schools.includes(cur) ? cur : '';
   const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value), tr = src.filter(r => !sel.value || r.sekolah === sel.value);
-  const cy = new Date().getFullYear(), ys = src.map(r => +r.bulan.slice(0, 4));
-  const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(2035, ...ys);
+  const cy = new Date().getFullYear(), ys = src.map(r => +r.bulan.slice(0, 4)).filter(n => n >= 2000 && n <= 2100);
+  const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(cy + 5, ...ys);
   sy.innerHTML = Array.from({ length: y1 - y0 + 1 }, (_, i) => `<option>${y1 - i}</option>`).join('');
   sb.innerHTML = MLONG.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}">${n}</option>`).join('');
   const init = (adm && serverBulan) || tr.map(r => r.bulan).sort().pop() || ymNow();
   sy.value = [...sy.options].some(o => o.value === prevY) ? prevY : init.slice(0, 4);
+  if (!sy.value) sy.value = String(cy);
   sb.value = prevM || init.slice(5, 7);
+  if (!sb.value) sb.value = ymNow().slice(5, 7);
   const ym = sy.value + '-' + sb.value;
   const data = bySchool.filter(r => r.bulan === ym);
   const I = sum(data, 'islam'), B = sum(data, 'bisaBaca');
