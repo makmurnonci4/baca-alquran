@@ -283,7 +283,7 @@ function render() {
   sel.value = schools.includes(cur) ? cur : '';
   const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value);
   const cy = new Date().getFullYear(), ys = rows.map(r => +r.bulan.slice(0, 4));
-  const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(cy + 1, ...ys);
+  const y0 = Math.min(cy - 1, ...ys), y1 = Math.max(2035, ...ys);
   sy.innerHTML = Array.from({ length: y1 - y0 + 1 }, (_, i) => `<option>${y1 - i}</option>`).join('');
   sb.innerHTML = MLONG.map((n, i) => `<option value="${String(i + 1).padStart(2, '0')}">${n}</option>`).join('');
   const init = bySchool.map(r => r.bulan).sort().pop() || new Date().toISOString().slice(0, 7);
