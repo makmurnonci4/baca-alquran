@@ -273,10 +273,13 @@ function isiForm() {
   }
   const kls = f.kelas.value.trim(), bln = f.bulan.value;
   const pas = mine.find(r => r.bulan === bln && String(r.kelas) === kls);
-  f.islam.value = pas ? pas.islam : ''; f.bisaBaca.value = pas ? pas.bisaBaca : '';
+  const lama = terbaru.find(r => String(r.kelas) === kls);
+  const src = pas || lama;
+  f.islam.value = src ? src.islam : ''; f.bisaBaca.value = src ? src.bisaBaca : '';
   calc();
   $('#info2').textContent = !kls ? '' : pas ? 'Menampilkan data tersimpan: kelas ' + kls + ' · ' + fm(bln) + '. Ubah angkanya lalu klik Simpan data untuk memperbarui.'
-    : 'Belum ada data untuk kelas ' + kls + ' · ' + fm(bln) + '. Isi jumlahnya lalu klik Simpan data.';
+    : src ? 'Belum ada data untuk ' + fm(bln) + '. Terisi dari data terakhir (' + fm(src.bulan) + '); ubah lalu klik Simpan data.'
+    : 'Belum ada data tersimpan untuk kelas ' + kls + '.';
 }
 let loadSeq = 0;
 async function loadData() {
