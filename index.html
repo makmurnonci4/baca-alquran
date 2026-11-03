@@ -64,39 +64,63 @@ svg.ch{width:100%;height:auto;display:block}
 .btn.sm{padding:4px 12px;font-size:13px}
 .empty{color:var(--mut);padding:12px 0}
 @media(max-width:560px){.row{grid-template-columns:60px 1fr}.row .v{grid-column:1/-1}}
+
+[hidden]{display:none!important}
+.hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.who{font-size:13px;text-align:right}.who b{display:block;font-size:15px}
+.who button{margin-top:4px;background:transparent;border:1px solid #cfe6df;color:#fff;border-radius:6px;padding:3px 12px;cursor:pointer;font:inherit;font-size:13px}
+.narrow{max-width:460px;margin:0 auto}
+.t2{display:flex;gap:8px;margin-bottom:14px}
+.t2 button{flex:1;padding:9px;border:1px solid var(--line);background:#fff;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+.t2 button.on{background:var(--g);color:#fff;border-color:var(--g)}
+textarea{font:inherit;padding:9px 10px;border:1px solid #b9c9c4;border-radius:6px;width:100%}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#fdf0d5;color:#7a5200}
+.mut{color:var(--mut)}
+@media print{#adm,#auth,.who{display:none!important}}
 </style>
 </head>
 <body>
 <header><div class="w">
-<h1>Dashboard Baca Al-Qur'an</h1>
-<p>Rekap kemampuan baca Al-Qur'an siswa Muslim per kelas dan per bulan · <span id="mode"></span></p>
-<nav><button class="on" data-t="isi">Isi data</button><button data-t="dash">Dashboard</button></nav>
+<div class="hd"><div><h1>Dashboard Baca Al-Qur'an</h1>
+<p>Rekap kemampuan baca Al-Qur'an siswa Muslim per kelas dan per bulan · <span id="st">memeriksa koneksi...</span></p></div>
+<div class="who" id="who"></div></div>
+<nav id="nav"></nav>
 </div></header>
 <main><div class="w">
 
-<section id="isi" class="on">
-<div class="card" id="setup" hidden><h2>Hubungkan ke Google Sheets</h2>
-<p class="hint">Dashboard masih mode demo. Tempel Web App URL dari Apps Script (disalin utuh, berakhiran /exec), lalu tes koneksinya.</p>
-<input id="u" style="width:100%" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
-<p><button class="btn" id="tes" type="button">Tes koneksi</button></p><div id="uo"></div></div>
-<div class="card">
+<section id="auth"><div class="card narrow">
+<div class="t2"><button type="button" data-m="fl" class="on">Masuk</button><button type="button" data-m="fd">Daftar</button></div>
+<form id="fl">
+<label class="full">Nama pengguna<input name="username" required autocomplete="username" autocapitalize="none"></label>
+<label class="full">Kata sandi<input name="password" type="password" required autocomplete="current-password"></label>
+<div class="full"><button class="btn" type="submit">Masuk</button></div>
+</form>
+<form id="fd" hidden>
+<label class="full">Nama lengkap<input name="nama" required></label>
+<label class="full">Nama pengguna<input name="username" required autocapitalize="none" placeholder="huruf kecil/angka, mis. ica01"></label>
+<label class="full">Kata sandi<input name="password" type="password" required minlength="6" autocomplete="new-password"><span class="hint">Minimal 6 karakter</span></label>
+<label class="full">Peran<select name="role"><option value="guru">Guru</option><option value="kepala">Kepala sekolah</option></select></label>
+<label class="full">Sekolah<select name="sekolah" id="ds" required></select></label>
+<div class="full"><button class="btn" type="submit">Buat akun</button>
+<p class="hint">Akun kepala sekolah aktif setelah disetujui admin. Akun guru langsung aktif.</p></div>
+</form>
+</div></section>
+
+<section id="isi"><div class="card">
 <h2>Form data guru</h2>
 <form id="f">
+<div class="full hint" id="info"></div>
 <label>Bulan<input name="bulan" type="month" required></label>
-<label>Kecamatan<select name="kecamatan" required><option value="">Pilih kecamatan</option><option>Kecamatan Bacukiki</option><option>Kecamatan Bacukiki Barat</option><option>Kecamatan Soreang</option><option>Kecamatan Ujung</option></select></label>
-<label>Nama sekolah<input name="sekolah" required placeholder="UPTD SDN 12"></label>
-<label>Nama guru<input name="guru" required></label>
 <label>Guru kelas<input name="kelas" required list="kls" placeholder="mis. 1, 2A, atau 6B" autocomplete="off"><datalist id="kls"><option>1<option>2<option>3<option>4<option>5<option>6</datalist></label>
 <label>Jumlah siswa beragama Islam<input name="islam" type="number" min="0" required inputmode="numeric"></label>
 <label>Jumlah bisa baca Al-Qur'an<input name="bisaBaca" type="number" min="0" required inputmode="numeric"></label>
 <label>Jumlah belum bisa baca Al-Qur'an<input id="belumBaca" readonly tabindex="-1"><span class="hint">Dihitung otomatis</span></label>
 <div class="full"><button class="btn" type="submit">Simpan data</button>
-<span class="hint"> Mengisi ulang dengan bulan, sekolah, guru, dan kelas yang sama akan memperbarui data lama.</span></div>
+<span class="hint"> Mengisi ulang dengan bulan dan kelas yang sama akan memperbarui data lama.</span></div>
 </form></div></section>
 
 <section id="dash">
-<div class="top"><label style="flex-direction:row;align-items:center;gap:8px">Kecamatan <select id="fk"></select></label>
-<label style="flex-direction:row;align-items:center;gap:8px">Sekolah <select id="fs"></select></label>
+<div class="top"><label id="fsw" style="flex-direction:row;align-items:center;gap:8px">Sekolah <select id="fs"></select></label>
 <label style="flex-direction:row;align-items:center;gap:8px">Bulan <select id="fb"></select></label>
 <button class="btn" id="pdf" type="button">Unduh PDF</button>
 <button class="btn ghost" id="csv" type="button">Unduh CSV</button></div>
@@ -106,9 +130,17 @@ svg.ch{width:100%;height:auto;display:block}
 <div class="card"><h2>Per kelas</h2>
 <div class="lg"><span><s style="background:var(--g)"></s>Bisa baca</span><span><s style="background:var(--gold)"></s>Belum bisa baca</span></div>
 <div id="kelas"></div></div>
-<div class="card"><h2>Per kecamatan</h2><div class="tw" id="kec"></div></div>
-<div class="card"><h2>Per sekolah</h2><div class="tw" id="sek"></div></div>
+<div class="card" id="cg"><h2>Progres per guru</h2><div class="tw" id="gur"></div></div>
+<div class="card" id="cs"><h2>Per sekolah</h2><div class="tw" id="sek"></div></div>
 <div class="card"><h2>Data masuk</h2><div class="tw" id="all"></div></div>
+</section>
+
+<section id="adm">
+<div class="card"><h2>Daftar sekolah</h2>
+<p class="hint">Tulis satu nama sekolah per baris. Guru dan kepala sekolah memilih dari daftar ini saat mendaftar.</p>
+<textarea id="sk" rows="8" placeholder="UPTD SDN 12&#10;UPTD SDN 25"></textarea>
+<p><button class="btn" id="sks" type="button">Simpan daftar sekolah</button></p></div>
+<div class="card"><h2>Pengguna</h2><div class="tw" id="usr"></div></div>
 </section>
 
 </div></main>
@@ -116,97 +148,37 @@ svg.ch{width:100%;height:auto;display:block}
 
 <script src="config.js"></script>
 <script>
-// URL Web App dibaca dari config.js. Kosong = mode demo (data hanya di browser ini).
 const API_URL = (window.API_URL || '').trim();
-
 const $ = s => document.querySelector(s), f = $('#f');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const NUM = ['islam','bisaBaca','belumBaca'];
-const KECS = ['Kecamatan Bacukiki','Kecamatan Bacukiki Barat','Kecamatan Soreang','Kecamatan Ujung'];
 const BLN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 const fm = ym => BLN[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
-let rows = [];
-
-$('#mode').textContent = !API_URL ? 'Mode demo (data hanya di browser ini)' : /\/exec$/.test(API_URL) ? 'Menghubungkan ke Google Sheets...' : 'API_URL salah: harus berakhiran /exec';
-
-function toast(m, err) {
-  const t = $('#toast'); t.textContent = m; t.className = err ? 'err' : ''; t.style.display = 'block';
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 3500);
-}
-document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('nav button,section').forEach(e => e.classList.remove('on'));
-  b.classList.add('on'); $('#' + b.dataset.t).classList.add('on'); if (b.dataset.t === 'dash' && API_URL) load();
-});
+const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
+const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
+let me = null, token = '', rows = [], gurus = [];
+try { token = localStorage.getItem('btq_tk') || ''; me = JSON.parse(localStorage.getItem('btq_me') || 'null'); } catch (_) {}
 
 const why = e => { const m = String(e && e.message || e);
-  return /Failed to fetch|NetworkError|Load failed/i.test(m) ? 'browser tidak bisa menjangkau Google. Cek akses deploy ("Siapa saja"), URL, atau koneksi/ekstensi browser'
-    : /JSON|Unexpected token/i.test(m) ? 'Google membalas halaman login, bukan data. Akses deploy belum "Siapa saja", atau URL berasal dari proyek lain' : m; };
-let lastErr = '';
-async function load() {
-  let ok = true;
-  try {
-    if (API_URL) {
-      const d = await (await fetch(API_URL)).json();
-      if (!Array.isArray(d)) throw new Error(d && d.error ? d.error : 'respons tidak dikenali');
-      rows = d;
-    } else rows = JSON.parse(localStorage.getItem('btq') || '[]');
-  } catch (e) { ok = false; rows = []; lastErr = why(e); toast('Gagal memuat data: ' + lastErr, 1); }
-  rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = String(r.bulan || '').slice(0, 7); r.kecamatan = r.kecamatan || ''; });
-  rows = rows.filter(r => r.bulan);
-  if (API_URL && /\/exec$/.test(API_URL)) $('#mode').textContent = ok ? 'Terhubung ke Google Sheets' : 'Belum terhubung: ' + lastErr;
-  render();
-  return ok;
+  return /Failed to fetch|NetworkError|Load failed/i.test(m) ? 'browser tidak bisa menjangkau Google. Cek akses deploy ("Siapa saja"), URL di config.js, atau koneksi'
+    : /JSON|Unexpected token/i.test(m) ? 'Google membalas halaman login, bukan data. Akses deploy belum "Siapa saja"' : m; };
+function toast(m, err) {
+  const t = $('#toast'); t.textContent = m; t.className = err ? 'err' : ''; t.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', 4000);
 }
-
-function calc() {
-  const n = k => parseInt(f[k].value) || 0;
-  $('#belumBaca').value = f.islam.value === '' ? '' : n('islam') - n('bisaBaca');
+async function api(a, p = {}) {
+  if (!API_URL) throw new Error('API_URL di config.js belum diisi.');
+  const j = await (await fetch(API_URL, { method: 'POST', body: JSON.stringify({ a, token, ...p }) })).json();
+  if (j.error) { if (j.error === 'sesi') { keluar(); throw new Error(j.pesan); } throw new Error(j.error); }
+  return j;
 }
-f.addEventListener('input', calc);
-
-f.onsubmit = async e => {
-  e.preventDefault();
-  const n = k => parseInt(f[k].value) || 0;
-  const d = { bulan: f.bulan.value, kecamatan: f.kecamatan.value, sekolah: f.sekolah.value.trim(), guru: f.guru.value.trim(), kelas: f.kelas.value.trim(),
-    islam: n('islam'), bisaBaca: n('bisaBaca') };
-  if (d.bisaBaca > d.islam)
-    return toast('Jumlah yang bisa tidak boleh melebihi jumlah siswa beragama Islam.', 1);
-  d.belumBaca = d.islam - d.bisaBaca;
-  d.key = [d.bulan, d.kecamatan, d.sekolah, d.guru, d.kelas].join('|').toLowerCase();
-  d.updated = new Date().toISOString();
-  try {
-    if (API_URL) await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(d) });
-    else {
-      const i = rows.findIndex(r => r.key === d.key);
-      i >= 0 ? rows[i] = d : rows.push(d);
-      localStorage.setItem('btq', JSON.stringify(rows));
-    }
-    try { localStorage.setItem('btq_who', JSON.stringify([d.sekolah, d.guru, d.kecamatan])); } catch (_) {}
-    if (API_URL) {
-      let chk;
-      try { chk = await (await fetch(API_URL + '?key=' + encodeURIComponent(d.key) + '&kec=' + encodeURIComponent(d.kecamatan))).json(); }
-      catch (e2) { return toast('Tidak bisa membaca data dari Google Sheets (' + why(e2) + '). Cek deploy: akses harus "Siapa saja" dan sudah diizinkan.', 1); }
-      const hit = Array.isArray(chk) && chk.find(r => r.key === d.key && +r.islam === d.islam && +r.bisaBaca === d.bisaBaca);
-      if (!hit)
-        return toast('Data belum tercatat di Google Sheets. Periksa deploy Apps Script (akses harus "Anyone", lihat README).', 1);
-      const i = rows.findIndex(r => r.key === d.key);
-      i >= 0 ? rows[i] = d : rows.push(d);
-      render();
-    } else await load();
-    toast('Data tersimpan.');
-    ['kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = ''); calc();
-  } catch (err) {
-    toast(/fetch/i.test(err.message) ? 'Tidak bisa terhubung ke Google Sheets. Periksa API_URL (berakhiran /exec) dan akses "Anyone".' : 'Gagal menyimpan: ' + err.message, 1);
-  }
-};
 
 function bar(a, b) { // a = bisa, b = belum
   const t = a + b || 1;
   return `<div class="bar" title="${a} bisa, ${b} belum"><i style="width:${a / t * 100}%"></i><i style="width:${b / t * 100}%"></i></div>`;
 }
 const sum = (list, k) => list.reduce((s, r) => s + r[k], 0);
-
 function trend(list) {
   const ms = [...new Set(list.map(r => r.bulan))].sort();
   if (!ms.length) return '<div class="empty">Belum ada data bulanan.</div>';
@@ -224,61 +196,163 @@ function trend(list) {
   return s + '</svg>';
 }
 
+function show(t) {
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === t));
+  if (t === 'adm') loadAdm();
+}
+$('#nav').onclick = e => { const b = e.target.closest('button'); if (b) show(b.dataset.t); };
+
+// ---- Masuk / daftar ----
+document.querySelectorAll('.t2 button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.t2 button').forEach(x => x.classList.toggle('on', x === b));
+  $('#fl').hidden = b.dataset.m !== 'fl'; $('#fd').hidden = b.dataset.m !== 'fd';
+});
+async function loadSekolah() {
+  try {
+    const s = (await api('sekolah')).sekolah;
+    $('#ds').innerHTML = s.length ? '<option value="">Pilih sekolah</option>' + s.map(x => `<option>${esc(x)}</option>`).join('') : '<option value="">(Admin belum mengisi daftar sekolah)</option>';
+  } catch (e) { $('#ds').innerHTML = '<option value="">(Tidak bisa memuat sekolah)</option>'; }
+}
+$('#fl').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const j = await api('masuk', { username: e.target.username.value, password: e.target.password.value });
+    token = j.token; me = j.user; e.target.reset();
+    try { localStorage.setItem('btq_tk', token); localStorage.setItem('btq_me', JSON.stringify(me)); } catch (_) {}
+    start();
+  } catch (err) { toast(why(err), 1); }
+};
+$('#fd').onsubmit = async e => {
+  e.preventDefault(); const d = e.target;
+  try {
+    const j = await api('daftar', { nama: d.nama.value, username: d.username.value, password: d.password.value, role: d.role.value, sekolah: d.sekolah.value });
+    toast(j.status === 'aktif' ? 'Akun dibuat. Silakan masuk.' : 'Akun dibuat. Menunggu persetujuan admin.');
+    d.reset(); document.querySelector('.t2 button[data-m=fl]').click();
+  } catch (err) { toast(why(err), 1); }
+};
+function keluar() {
+  me = null; token = ''; rows = []; gurus = [];
+  try { localStorage.removeItem('btq_tk'); localStorage.removeItem('btq_me'); } catch (_) {}
+  $('#who').innerHTML = ''; $('#nav').innerHTML = ''; show('auth'); loadSekolah();
+}
+
+// ---- Setelah masuk ----
+async function start() {
+  $('#who').innerHTML = `<b>${esc(me.nama)}</b>${ROLE[me.role]}${me.sekolah ? ' · ' + esc(me.sekolah) : ''}<br><button type="button" id="out">Keluar</button>`;
+  $('#out').onclick = keluar;
+  $('#nav').innerHTML = TABS[me.role].map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join('');
+  if (me.role === 'guru') $('#info').textContent = 'Sekolah: ' + me.sekolah + ' · Guru: ' + me.nama;
+  show(TABS[me.role][0][0]);
+  await loadData();
+}
+async function loadData() {
+  try {
+    const j = await api('data'); rows = j.data; gurus = j.guru || [];
+    rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = String(r.bulan).slice(0, 7); });
+  } catch (e) { rows = []; if (me) toast(why(e), 1); }
+  render();
+}
+
+function calc() {
+  const n = k => parseInt(f[k].value) || 0;
+  $('#belumBaca').value = f.islam.value === '' ? '' : n('islam') - n('bisaBaca');
+}
+f.addEventListener('input', calc);
+f.onsubmit = async e => {
+  e.preventDefault();
+  const islam = parseInt(f.islam.value) || 0, bisaBaca = parseInt(f.bisaBaca.value) || 0;
+  if (bisaBaca > islam) return toast('Jumlah yang bisa tidak boleh melebihi jumlah siswa beragama Islam.', 1);
+  try {
+    await api('simpan', { bulan: f.bulan.value, kelas: f.kelas.value.trim(), islam, bisaBaca });
+    toast('Data tersimpan.');
+    ['kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = ''); calc();
+    await loadData();
+  } catch (err) { toast(why(err), 1); }
+};
+
 function render() {
-  const sel = $('#fs'), cur = sel.value, sb = $('#fb'), curB = sb.value;
-  const fk = $('#fk'), curK = fk.value;
-  fk.innerHTML = '<option value="">Semua kecamatan</option>' + KECS.map(k => `<option>${esc(k)}</option>`).join('');
-  fk.value = KECS.includes(curK) ? curK : '';
-  const inKec = rows.filter(r => !fk.value || r.kecamatan === fk.value);
-  const schools = [...new Set(inKec.map(r => r.sekolah))].sort();
+  if (!me) return;
+  const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sb = $('#fb'), curB = sb.value;
+  $('#fsw').hidden = !adm; $('#cs').hidden = !adm; $('#cg').hidden = me.role === 'guru';
+  const schools = [...new Set(rows.map(r => r.sekolah))].sort();
   sel.innerHTML = '<option value="">Semua sekolah</option>' + schools.map(s => `<option>${esc(s)}</option>`).join('');
   sel.value = schools.includes(cur) ? cur : '';
-  const bySchool = inKec.filter(r => !sel.value || r.sekolah === sel.value);
+  const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value);
   const months = [...new Set(bySchool.map(r => r.bulan))].sort().reverse();
   sb.innerHTML = months.map(m => `<option value="${m}">${fm(m)}</option>`).join('');
   sb.value = months.includes(curB) ? curB : (months[0] || '');
   const data = bySchool.filter(r => r.bulan === sb.value);
   const I = sum(data, 'islam'), B = sum(data, 'bisaBaca');
 
-  $('#kpis').innerHTML = [
-    [I, 'Siswa beragama Islam'], [B, "Bisa baca Al-Qur'an"],
-    [I - B, 'Belum bisa baca'], [pct(B, I) + '%', 'Capaian bisa baca']
-  ].map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l}${sb.value ? ' · ' + fm(sb.value) : ''}</span></div>`).join('');
-
-  $('#ph').innerHTML = `Rekap Baca Al-Qur'an<small>${esc(fk.value || 'Semua kecamatan')} · ${esc(sel.value || 'Semua sekolah')} · ${sb.value ? fm(sb.value) : 'Semua bulan'} · dicetak ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</small>`;
+  $('#kpis').innerHTML = [[I, 'Siswa beragama Islam'], [B, "Bisa baca Al-Qur'an"], [I - B, 'Belum bisa baca'], [pct(B, I) + '%', 'Capaian bisa baca']]
+    .map(([v, l]) => `<div class="kpi"><b>${v}</b><span>${l}${sb.value ? ' · ' + fm(sb.value) : ''}</span></div>`).join('');
+  $('#ph').innerHTML = `Rekap Baca Al-Qur'an<small>${esc(adm ? (sel.value || 'Semua sekolah') : me.sekolah)} · ${sb.value ? fm(sb.value) : 'Semua bulan'} · dicetak ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</small>`;
   $('#trend').innerHTML = trend(bySchool);
 
   const ks = [...new Set(data.map(r => r.kelas))].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
   $('#kelas').innerHTML = ks.length ? ks.map(k => {
     const g = data.filter(r => r.kelas === k), i = sum(g, 'islam'), b = sum(g, 'bisaBaca');
     return `<div class="row"><b>Kelas ${esc(k)}</b>${bar(b, i - b)}<span class="v">${b} dari ${i} bisa (${pct(b, i)}%)</span></div>`;
-  }).join('') : '<div class="empty">Belum ada data. Mulai dari tab Isi data.</div>';
+  }).join('') : '<div class="empty">Belum ada data bulan ini.</div>';
 
-  const kd = rows.filter(r => (!sel.value || r.sekolah === sel.value) && r.bulan === sb.value), kl = KECS.filter(k => kd.some(r => r.kecamatan === k));
-  $('#kec').innerHTML = kl.length ? `<table><tr><th>Kecamatan<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
-    kl.map(k => { const g = kd.filter(r => r.kecamatan === k), i = sum(g, 'islam'), b = sum(g, 'bisaBaca');
-      return `<tr><td>${esc(k)}<td class="n">${i}<td class="n">${b}<td class="n">${i - b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`; }).join('') + '</table>' : '<div class="empty">Belum ada data.</div>';
-  const ss = [...new Set(data.map(r => r.kecamatan + '\t' + r.sekolah))].sort();
-  $('#sek').innerHTML = ss.length ? `<table><tr><th>Sekolah<th>Kecamatan<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
-    ss.map(x => {
-      const [kc, s] = x.split('\t'), g = data.filter(r => r.kecamatan === kc && r.sekolah === s), i = sum(g, 'islam'), b = sum(g, 'bisaBaca');
-      return `<tr><td>${esc(s)}<td>${esc(kc)}<td class="n">${i}<td class="n">${b}<td class="n">${i - b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`;
+  const gl = gurus.filter(g => !sel.value || g.sekolah === sel.value);
+  $('#gur').innerHTML = gl.length ? `<table><tr><th>Guru<th>Sekolah<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th>Capaian<th class="n">%</tr>` +
+    gl.map(g => {
+      const x = data.filter(r => String(r.username) === g.username), i = sum(x, 'islam'), b = sum(x, 'bisaBaca');
+      return x.length ? `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td>${esc(x.map(r => r.kelas).join(', '))}<td class="n">${i}<td class="n">${b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`
+        : `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td colspan="5" class="mut">Belum mengisi pada bulan ini</tr>`;
+    }).join('') + '</table>' : '<div class="empty">Belum ada guru yang terdaftar.</div>';
+
+  const ss = [...new Set(data.map(r => r.sekolah))].sort();
+  $('#sek').innerHTML = ss.length ? `<table><tr><th>Sekolah<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
+    ss.map(s => {
+      const g = data.filter(r => r.sekolah === s), i = sum(g, 'islam'), b = sum(g, 'bisaBaca');
+      return `<tr><td>${esc(s)}<td class="n">${i}<td class="n">${b}<td class="n">${i - b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`;
     }).join('') + '</table>' : '<div class="empty">Belum ada data.</div>';
 
+  const btn = (r, op, t) => `<button class="btn ghost sm" type="button" data-k="${esc(r.key)}" data-op="${op}">${t}</button>`;
+  const act = r => me.role === 'guru' ? btn(r, 'edit', 'Edit') + ' ' + btn(r, 'del', 'Hapus') : adm ? btn(r, 'del', 'Hapus') : '';
   const all = [...bySchool].sort((a, b) => b.bulan.localeCompare(a.bulan));
-  $('#all').innerHTML = all.length ? `<table><tr><th>Bulan<th>Kecamatan<th>Sekolah<th>Guru<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th></tr>` +
-    all.map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.kecamatan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td><button class="btn ghost sm" type="button" data-k="${esc(r.key)}">Edit</button></tr>`).join('') + '</table>'
+  $('#all').innerHTML = all.length ? `<table><tr><th>Bulan<th>Sekolah<th>Guru<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th></tr>` +
+    all.map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td>${act(r)}</tr>`).join('') + '</table>'
     : '<div class="empty">Belum ada data.</div>';
 }
-$('#all').onclick = e => {
+$('#fs').onchange = render; $('#fb').onchange = render;
+$('#all').onclick = async e => {
   const b = e.target.closest('button[data-k]'); if (!b) return;
   const r = rows.find(x => x.key === b.dataset.k); if (!r) return;
-  ['bulan', 'kecamatan', 'sekolah', 'guru', 'kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = r[k]);
-  calc(); document.querySelector('nav button[data-t=isi]').click(); f.islam.focus();
-  toast('Data dimuat ke form. Ubah angka lalu klik Simpan data.');
+  if (b.dataset.op === 'edit') {
+    ['bulan', 'kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = r[k]); calc(); show('isi'); f.islam.focus();
+    toast('Data dimuat ke form. Ubah jumlahnya lalu klik Simpan data.');
+  } else if (confirm('Hapus data ini?')) {
+    try { await api('hapus', { key: r.key }); toast('Data dihapus.'); await loadData(); } catch (err) { toast(why(err), 1); }
+  }
 };
-$('#fk').onchange = render; $('#fs').onchange = render; $('#fb').onchange = render;
 
+// ---- Admin ----
+async function loadAdm() {
+  try {
+    $('#sk').value = (await api('sekolah')).sekolah.join('\n');
+    const u = (await api('pengguna')).pengguna.sort((a, b) => (a.status === 'aktif') - (b.status === 'aktif'));
+    const ub = (x, op, t, c) => `<button class="btn ${c} sm" type="button" data-u="${esc(x.username)}" data-op="${op}">${t}</button>`;
+    $('#usr').innerHTML = u.length ? `<table><tr><th>Nama<th>Pengguna<th>Peran<th>Sekolah<th>Status<th></tr>` +
+      u.map(x => `<tr><td>${esc(x.nama)}<td>${esc(x.username)}<td>${ROLE[x.role]}<td>${esc(x.sekolah)}<td>${x.status === 'aktif' ? 'Aktif' : '<span class="badge">Menunggu</span>'}<td>${x.status !== 'aktif' ? ub(x, 'setuju', 'Setujui', '') + ' ' : ''}${ub(x, 'reset', 'Reset sandi', 'ghost')} ${ub(x, 'hapus', 'Hapus', 'ghost')}</tr>`).join('') + '</table>'
+      : '<div class="empty">Belum ada pengguna.</div>';
+  } catch (e) { toast(why(e), 1); }
+}
+$('#sks').onclick = async () => {
+  try { await api('setSekolah', { names: $('#sk').value }); toast('Daftar sekolah tersimpan.'); loadAdm(); } catch (e) { toast(why(e), 1); }
+};
+$('#usr').onclick = async e => {
+  const b = e.target.closest('button[data-u]'); if (!b) return;
+  const p = { username: b.dataset.u, op: b.dataset.op };
+  if (p.op === 'hapus' && !confirm('Hapus akun ' + p.username + '?')) return;
+  if (p.op === 'reset') { p.password = prompt('Kata sandi baru untuk ' + p.username + ' (minimal 6 karakter):'); if (!p.password) return; }
+  try { await api('userSet', p); toast('Tersimpan.'); loadAdm(); } catch (err) { toast(why(err), 1); }
+};
+
+// ---- Unduh ----
 $('#pdf').onclick = () => {
   const t = document.title;
   document.title = 'rekap-baca-quran-' + ($('#fb').value || 'semua');
@@ -286,7 +360,7 @@ $('#pdf').onclick = () => {
   setTimeout(() => { window.print(); document.title = t; }, 300);
 };
 $('#csv').onclick = () => {
-  const h = ['bulan', 'kecamatan', 'sekolah', 'guru', 'kelas', ...NUM];
+  const h = ['bulan', 'sekolah', 'guru', 'kelas', ...NUM];
   const q = v => '"' + String(v).replace(/"/g, '""') + '"';
   const csv = [h.join(','), ...rows.map(r => h.map(k => q(r[k])).join(','))].join('\n');
   const a = document.createElement('a');
@@ -294,25 +368,17 @@ $('#csv').onclick = () => {
   a.download = 'rekap-baca-quran.csv'; a.click();
 };
 
-if (!API_URL) $('#setup').hidden = false;
-$('#tes').onclick = async () => {
-  const u = $('#u').value.trim(), o = $('#uo');
-  if (u.includes('...') || !/^https:\/\/script\.google\.com\/.+\/exec$/.test(u)) {
-    o.textContent = 'URL belum benar. Salin Web App URL utuh dari Apps Script (Deploy > Manage deployments). Tanda titik tiga hanya contoh, dan URL harus berakhiran /exec.'; return;
-  }
-  o.textContent = 'Menguji koneksi...';
-  try {
-    const d = await (await fetch(u)).json();
-    if (!Array.isArray(d)) throw new Error(d && d.error ? 'skrip melaporkan error: ' + d.error : 'respons tidak dikenali');
-    o.innerHTML = 'Berhasil terhubung. Salin baris ini, lalu tempel menggantikan isi <b>config.js</b> di GitHub (Edit > Commit changes):<pre></pre>';
-    o.querySelector('pre').textContent = "window.API_URL = '" + u + "';";
-  } catch (e) {
-    o.textContent = 'Gagal: ' + why(e) + '.';
-  }
-};
+// ---- Mulai ----
+(async () => {
+  if (!API_URL) $('#st').textContent = 'Belum diatur: isi API_URL di config.js';
+  else try {
+    const j = await (await fetch(API_URL)).json();
+    $('#st').textContent = j && j.ok ? 'Terhubung ke Google Sheets' : 'Code.gs lama masih berjalan: pilih Versi baru saat Deploy';
+  } catch (e) { $('#st').textContent = 'Belum terhubung: ' + why(e); }
+})();
 f.bulan.value = new Date().toISOString().slice(0, 7);
-try { const w = JSON.parse(localStorage.getItem('btq_who')); if (w) { f.sekolah.value = w[0]; f.guru.value = w[1]; f.kecamatan.value = w[2] || ''; } } catch (_) {}
-load();
+loadSekolah();
+if (me && token) start(); else show('auth');
 </script>
 </body>
 </html>
