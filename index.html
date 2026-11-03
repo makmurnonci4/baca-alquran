@@ -110,6 +110,7 @@ textarea{font:inherit;padding:9px 10px;border:1px solid #b9c9c4;border-radius:6p
 <h2>Form data guru</h2>
 <form id="f">
 <div class="full hint" id="info"></div>
+<div class="full hint" id="info2"></div>
 <label>Bulan<input name="bulan" type="month" required></label>
 <label>Guru kelas<input name="kelas" required list="kls" placeholder="mis. 1, 2A, atau 6B" autocomplete="off"><datalist id="kls"><option>1<option>2<option>3<option>4<option>5<option>6</datalist></label>
 <label>Jumlah siswa beragama Islam<input name="islam" type="number" min="0" required inputmode="numeric"></label>
@@ -244,7 +245,7 @@ $('#fd').onsubmit = async e => {
   } catch (err) { toast(why(err), 1); }
 };
 function keluar() {
-  f.reset(); f.bulan.value = ymNow(); calc();
+  f.reset(); f.bulan.value = ymNow(); calc(); $('#info2').textContent = '';
   me = null; token = ''; rows = []; gurus = []; agg = [];
   try { localStorage.removeItem('btq_tk'); localStorage.removeItem('btq_me'); } catch (_) {}
   $('#who').innerHTML = ''; $('#nav').innerHTML = ''; show('auth'); loadSekolah();
@@ -258,14 +259,27 @@ async function start() {
   if (me.role === 'guru') $('#info').textContent = 'Sekolah: ' + me.sekolah + ' · Guru: ' + me.nama;
   show(TABS[me.role][0][0]);
   await loadData();
-  isiKelas();
+  isiForm();
 }
 const prefKey = () => 'btq_kelas_' + (me && (me.username || me.nama) || '');
-function isiKelas() { // isi kelas dari pilihan terakhir (perangkat ini), atau dari data terakhir guru di server
-  if (!me || me.role !== 'guru' || f.kelas.value) return;
-  let k = ''; try { k = localStorage.getItem(prefKey()) || ''; } catch (_) {}
-  if (!k && rows.length) k = [...rows].sort((a, b) => b.bulan.localeCompare(a.bulan))[0].kelas;
-  if (k) f.kelas.value = k;
+// Isi form dengan data yang SUDAH TERSIMPAN (kelas, jumlah siswa, bisa baca). Tidak berubah sampai guru mengubah lalu menyimpan.
+function isiForm() {
+  if (!me || me.role !== 'guru') return;
+  const mine = rows.filter(r => !me.username || String(r.username) === String(me.username));
+  const terbaru = [...mine].sort((a, b) => b.bulan.localeCompare(a.bulan));
+  if (!f.kelas.value.trim()) {
+    let k = ''; try { k = localStorage.getItem(prefKey()) || ''; } catch (_) {}
+    f.kelas.value = k || (terbaru[0] ? terbaru[0].kelas : '');
+  }
+  const kls = f.kelas.value.trim(), bln = f.bulan.value;
+  const pas = mine.find(r => r.bulan === bln && String(r.kelas) === kls);
+  const lama = terbaru.find(r => String(r.kelas) === kls);
+  const src = pas || lama;
+  f.islam.value = src ? src.islam : ''; f.bisaBaca.value = src ? src.bisaBaca : '';
+  calc();
+  $('#info2').textContent = !kls ? '' : pas ? 'Menampilkan data tersimpan: kelas ' + kls + ' · ' + fm(bln) + '. Ubah angkanya lalu klik Simpan data untuk memperbarui.'
+    : src ? 'Belum ada data untuk ' + fm(bln) + '. Terisi dari data terakhir (' + fm(src.bulan) + '); ubah lalu klik Simpan data.'
+    : 'Belum ada data tersimpan untuk kelas ' + kls + '.';
 }
 let loadSeq = 0;
 async function loadData() {
@@ -291,6 +305,7 @@ function calc() {
   $('#belumBaca').value = f.islam.value === '' ? '' : n('islam') - n('bisaBaca');
 }
 f.addEventListener('input', calc);
+f.bulan.addEventListener('change', isiForm); f.kelas.addEventListener('change', isiForm);
 f.onsubmit = async e => {
   e.preventDefault();
   const islam = parseInt(f.islam.value) || 0, bisaBaca = parseInt(f.bisaBaca.value) || 0;
@@ -301,8 +316,8 @@ f.onsubmit = async e => {
     toast('Data tersimpan.');
     $('#fy').value = bln.slice(0, 4); $('#fb').value = bln.slice(5, 7);
     try { localStorage.setItem(prefKey(), f.kelas.value.trim()); } catch (_) {}
-    ['islam', 'bisaBaca'].forEach(k => f[k].value = ''); calc();
     await loadData();
+    isiForm();
   } catch (err) { toast(why(err), 1); }
 };
 
