@@ -157,7 +157,7 @@ const fm = ym => BLN[+ym.slice(5, 7) - 1] + ' ' + ym.slice(0, 4);
 const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
 const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
 const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
-let me = null, token = '', rows = [], gurus = [];
+let me = null, token = '', rows = [], gurus = [], daftar = [];
 try { token = localStorage.getItem('btq_tk') || ''; me = JSON.parse(localStorage.getItem('btq_me') || 'null'); } catch (_) {}
 
 const why = e => { const m = String(e && e.message || e);
@@ -249,6 +249,7 @@ async function start() {
 async function loadData() {
   try {
     const j = await api('data'); rows = j.data; gurus = j.guru || [];
+    if (me.role === 'admin') daftar = (await api('sekolah')).sekolah;
     rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = String(r.bulan).slice(0, 7); });
   } catch (e) { rows = []; if (me) toast(why(e), 1); }
   render();
@@ -275,7 +276,7 @@ function render() {
   if (!me) return;
   const adm = me.role === 'admin', sel = $('#fs'), cur = sel.value, sb = $('#fb'), curB = sb.value;
   $('#fsw').hidden = !adm; $('#cs').hidden = !adm; $('#cg').hidden = me.role === 'guru';
-  const schools = [...new Set(rows.map(r => r.sekolah))].sort();
+  const schools = [...new Set([...rows.map(r => r.sekolah), ...(adm ? daftar : [])])].sort((a, b) => String(a).localeCompare(String(b), 'id', { numeric: true }));
   sel.innerHTML = '<option value="">Semua sekolah</option>' + schools.map(s => `<option>${esc(s)}</option>`).join('');
   sel.value = schools.includes(cur) ? cur : '';
   const bySchool = rows.filter(r => !sel.value || r.sekolah === sel.value);
@@ -304,11 +305,12 @@ function render() {
         : `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td colspan="5" class="mut">Belum mengisi pada bulan ini</tr>`;
     }).join('') + '</table>' : '<div class="empty">Belum ada guru yang terdaftar.</div>';
 
-  const ss = [...new Set(data.map(r => r.sekolah))].sort();
+  const ss = schools.filter(s => !sel.value || s === sel.value);
   $('#sek').innerHTML = ss.length ? `<table><tr><th>Sekolah<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
     ss.map(s => {
       const g = data.filter(r => r.sekolah === s), i = sum(g, 'islam'), b = sum(g, 'bisaBaca');
-      return `<tr><td>${esc(s)}<td class="n">${i}<td class="n">${b}<td class="n">${i - b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`;
+      return g.length ? `<tr><td>${esc(s)}<td class="n">${i}<td class="n">${b}<td class="n">${i - b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`
+        : `<tr><td>${esc(s)}<td colspan="5" class="mut">Belum ada data pada bulan ini</tr>`;
     }).join('') + '</table>' : '<div class="empty">Belum ada data.</div>';
 
   const btn = (r, op, t) => `<button class="btn ghost sm" type="button" data-k="${esc(r.key)}" data-op="${op}">${t}</button>`;
@@ -342,7 +344,7 @@ async function loadAdm() {
   } catch (e) { toast(why(e), 1); }
 }
 $('#sks').onclick = async () => {
-  try { await api('setSekolah', { names: $('#sk').value }); toast('Daftar sekolah tersimpan.'); loadAdm(); } catch (e) { toast(why(e), 1); }
+  try { await api('setSekolah', { names: $('#sk').value }); toast('Daftar sekolah tersimpan.'); loadAdm(); loadData(); } catch (e) { toast(why(e), 1); }
 };
 $('#usr').onclick = async e => {
   const b = e.target.closest('button[data-u]'); if (!b) return;
