@@ -38,6 +38,10 @@ input[readonly]{background:#f1f5f4;color:var(--mut)}
 .lg{font-size:13px;color:var(--mut);display:flex;gap:16px;margin-bottom:6px}
 .lg s{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;text-decoration:none}
 .tw{overflow-x:auto}
+#grid input{width:120px;text-align:right;padding:6px 8px}
+#grid tr.bad input{border-color:var(--err);background:#fdeceb}
+#grid tr.bad .belum{color:var(--err);font-weight:700}
+#grid tr.tot td{border-top:2px solid var(--line);background:#f6f9f8}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
 th{font-size:13px;color:var(--mut)}td.n,th.n{text-align:right}
@@ -99,25 +103,22 @@ textarea{font:inherit;padding:9px 10px;border:1px solid #b9c9c4;border-radius:6p
 <label class="full">Nama lengkap<input name="nama" required></label>
 <label class="full">Nama pengguna<input name="username" required autocapitalize="none" placeholder="huruf kecil/angka, mis. ica01"></label>
 <label class="full">Kata sandi<input name="password" type="password" required minlength="6" autocomplete="new-password"><span class="hint">Minimal 6 karakter</span></label>
-<label class="full">Peran<select name="role"><option value="guru">Guru</option><option value="kepala">Kepala sekolah</option></select></label>
+<label class="full">Peran<select name="role"><option value="guru">Operator</option><option value="kepala">Kepala sekolah</option></select></label>
 <label class="full">Sekolah<select name="sekolah" id="ds" required></select></label>
 <div class="full"><button class="btn" type="submit">Buat akun</button>
-<p class="hint">Akun kepala sekolah aktif setelah disetujui admin. Akun guru langsung aktif.</p></div>
+<p class="hint">Akun kepala sekolah aktif setelah disetujui admin. Akun operator langsung aktif.</p></div>
 </form>
 </div></section>
 
 <section id="isi"><div class="card">
-<h2>Form data guru</h2>
+<h2>Form data operator</h2>
 <form id="f">
 <div class="full hint" id="info"></div>
 <div class="full hint" id="info2"></div>
 <label>Bulan<input name="bulan" type="month" required></label>
-<label>Guru kelas<input name="kelas" required list="kls" placeholder="mis. 1, 2A, atau 6B" autocomplete="off"><datalist id="kls"><option>1<option>2<option>3<option>4<option>5<option>6</datalist></label>
-<label>Jumlah siswa beragama Islam<input name="islam" type="number" min="0" required inputmode="numeric"></label>
-<label>Jumlah bisa baca Al-Qur'an<input name="bisaBaca" type="number" min="0" required inputmode="numeric"></label>
-<label>Jumlah belum bisa baca Al-Qur'an<input id="belumBaca" readonly tabindex="-1"><span class="hint">Dihitung otomatis</span></label>
+<div class="full tw" id="grid"></div>
 <div class="full"><button class="btn" type="submit">Simpan data</button>
-<span class="hint"> Mengisi ulang dengan bulan dan kelas yang sama akan memperbarui data lama.</span></div>
+<span class="hint"> Isi jumlah kumulatif tiap kelas. Mengisi ulang bulan yang sama akan memperbarui data lama.</span></div>
 </form></div></section>
 
 <section id="dash">
@@ -132,14 +133,14 @@ textarea{font:inherit;padding:9px 10px;border:1px solid #b9c9c4;border-radius:6p
 <div class="card"><h2>Per kelas</h2>
 <div class="lg"><span><s style="background:var(--g)"></s>Bisa baca</span><span><s style="background:var(--gold)"></s>Belum bisa baca</span></div>
 <div id="kelas"></div></div>
-<div class="card" id="cg"><h2>Progres per guru</h2><div class="tw" id="gur"></div></div>
+<div class="card" id="cg"><h2>Progres per operator</h2><div class="tw" id="gur"></div></div>
 <div class="card" id="cs"><h2>Per sekolah</h2><div class="tw" id="sek"></div></div>
 <div class="card"><h2>Data masuk</h2><div class="tw" id="all"></div></div>
 </section>
 
 <section id="adm">
 <div class="card"><h2>Daftar sekolah</h2>
-<p class="hint">Tulis satu nama sekolah per baris. Guru dan kepala sekolah memilih dari daftar ini saat mendaftar.</p>
+<p class="hint">Tulis satu nama sekolah per baris. Operator dan kepala sekolah memilih dari daftar ini saat mendaftar.</p>
 <textarea id="sk" rows="8" placeholder="UPTD SDN 12&#10;UPTD SDN 25"></textarea>
 <p><button class="btn" id="sks" type="button">Simpan daftar sekolah</button></p></div>
 <div class="card"><h2>Pengguna</h2><div class="tw" id="usr"></div></div>
@@ -168,9 +169,9 @@ const normBulan = v => {
   const d = new Date(t);
   return t && !isNaN(d) ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') : '';
 };
-const ROLE = { guru: 'Guru', kepala: 'Kepala sekolah', admin: 'Admin' };
+const ROLE = { guru: 'Operator', kepala: 'Kepala sekolah', admin: 'Admin' };
 const TABS = { guru: [['isi', 'Isi data'], ['dash', 'Dashboard']], kepala: [['dash', 'Dashboard']], admin: [['dash', 'Dashboard'], ['adm', 'Sekolah & pengguna']] };
-let me = null, token = '', rows = [], gurus = [], daftar = [], agg = [], serverBulan = '';
+let me = null, token = '', rows = [], gurus = [], daftar = [], agg = [], serverBulan = '', kelasList = [], jenjang = '';
 try { token = localStorage.getItem('btq_tk') || ''; me = JSON.parse(localStorage.getItem('btq_me') || 'null'); } catch (_) {}
 
 const why = e => { const m = String(e && e.message || e);
@@ -245,7 +246,7 @@ $('#fd').onsubmit = async e => {
   } catch (err) { toast(why(err), 1); }
 };
 function keluar() {
-  f.reset(); f.bulan.value = ymNow(); calc(); $('#info2').textContent = '';
+  f.reset(); f.bulan.value = ymNow(); kelasList = []; jenjang = ''; $('#grid').innerHTML = ''; $('#info2').textContent = '';
   me = null; token = ''; rows = []; gurus = []; agg = [];
   try { localStorage.removeItem('btq_tk'); localStorage.removeItem('btq_me'); } catch (_) {}
   $('#who').innerHTML = ''; $('#nav').innerHTML = ''; show('auth'); loadSekolah();
@@ -256,27 +257,29 @@ async function start() {
   $('#who').innerHTML = `<b>${esc(me.nama)}</b>${ROLE[me.role]}${me.sekolah ? ' · ' + esc(me.sekolah) : ''}<br><button type="button" id="out">Keluar</button>`;
   $('#out').onclick = keluar;
   $('#nav').innerHTML = TABS[me.role].map(t => `<button data-t="${t[0]}">${t[1]}</button>`).join('');
-  if (me.role === 'guru') $('#info').textContent = 'Sekolah: ' + me.sekolah + ' · Guru: ' + me.nama;
+  if (me.role === 'guru') $('#info').textContent = 'Sekolah: ' + me.sekolah + ' · Operator: ' + me.nama;
   show(TABS[me.role][0][0]);
   await loadData();
   isiForm();
 }
-const prefKey = () => 'btq_kelas_' + (me && (me.username || me.nama) || '');
-// Isi form dengan data yang SUDAH TERSIMPAN (kelas, jumlah siswa, bisa baca). Tidak berubah sampai guru mengubah lalu menyimpan.
+// Tabel semua kelas sesuai jenjang (SD: 1-6, SMP: 7-9), diisi dari data yang SUDAH TERSIMPAN untuk bulan terpilih.
 function isiForm() {
   if (!me || me.role !== 'guru') return;
-  const mine = rows.filter(r => !me.username || String(r.username) === String(me.username));
-  const terbaru = [...mine].sort((a, b) => b.bulan.localeCompare(a.bulan));
-  if (!f.kelas.value.trim()) {
-    let k = ''; try { k = localStorage.getItem(prefKey()) || ''; } catch (_) {}
-    f.kelas.value = k || (terbaru[0] ? terbaru[0].kelas : '');
-  }
-  const kls = f.kelas.value.trim(), bln = f.bulan.value;
-  const pas = mine.find(r => r.bulan === bln && String(r.kelas) === kls);
-  f.islam.value = pas ? pas.islam : ''; f.bisaBaca.value = pas ? pas.bisaBaca : '';
+  const g = $('#grid'), bln = f.bulan.value;
+  if (!kelasList.length) { g.innerHTML = '<div class="empty">Daftar kelas belum tersedia. Muat ulang halaman.</div>'; $('#info2').textContent = ''; return; }
+  $('#info').textContent = 'Sekolah: ' + me.sekolah + ' · Jenjang ' + jenjang + ' (kelas ' + kelasList[0] + '–' + kelasList[kelasList.length - 1] + ') · Operator: ' + me.nama;
+  if (!bln) { g.innerHTML = ''; $('#info2').textContent = 'Pilih bulan terlebih dahulu.'; return; }
+  const ada = {};
+  rows.forEach(r => { if (r.bulan === bln) ada[String(r.kelas).toUpperCase()] = r; });
+  const inp = (k, f, v, l) => `<input type="number" min="0" inputmode="numeric" data-f="${f}" aria-label="${l} kelas ${esc(k)}" value="${v}">`;
+  g.innerHTML = `<table><tr><th>Kelas<th class="n">Siswa beragama Islam<th class="n">Bisa baca Al-Qur'an<th class="n">Belum bisa baca</tr>` +
+    kelasList.map(k => { const r = ada[k];
+      return `<tr data-k="${esc(k)}"><td><b>Kelas ${esc(k)}</b><td class="n">${inp(k, 'islam', r ? r.islam : '', 'Siswa beragama Islam')}<td class="n">${inp(k, 'bisa', r ? r.bisaBaca : '', 'Bisa baca')}<td class="n belum"></tr>`;
+    }).join('') + `<tr class="tot"><td><b>Jumlah</b><td class="n" id="tI"><td class="n" id="tB"><td class="n" id="tN"></tr></table>`;
   calc();
-  $('#info2').textContent = !kls ? '' : pas ? 'Menampilkan data tersimpan: kelas ' + kls + ' · ' + fm(bln) + '. Ubah angkanya lalu klik Simpan data untuk memperbarui.'
-    : 'Belum ada data untuk kelas ' + kls + ' · ' + fm(bln) + '. Isi jumlahnya lalu klik Simpan data.';
+  const n = Object.keys(ada).length;
+  $('#info2').textContent = n ? 'Menampilkan data tersimpan ' + fm(bln) + ' (' + n + ' dari ' + kelasList.length + ' kelas terisi). Ubah angkanya lalu klik Simpan data.'
+    : 'Belum ada data untuk ' + fm(bln) + '. Isi jumlah tiap kelas lalu klik Simpan data.';
 }
 let loadSeq = 0;
 async function loadData() {
@@ -285,7 +288,8 @@ async function loadData() {
     const ym0 = $('#fy').value && $('#fb').value ? $('#fy').value + '-' + $('#fb').value : '';
     const j = await api('data', me.role === 'admin' ? { bulan: ym0 } : {});
     if (seq !== loadSeq) return; // ada permintaan yang lebih baru, abaikan balasan lama
-    rows = j.data; gurus = j.guru || []; agg = j.agg || []; serverBulan = j.bulan || '';
+    rows = j.data; gurus = j.guru || []; agg = j.agg || []; serverBulan = j.bulan || ''; kelasList = j.kelas || []; jenjang = j.jenjang || '';
+    if (me.role === 'kepala') { const sk = String(me.sekolah || '').trim(); rows = rows.filter(r => String(r.sekolah || '').trim() === sk); gurus = gurus.filter(g => String(g.sekolah || '').trim() === sk); agg = agg.filter(r => !r.sekolah || String(r.sekolah).trim() === sk); }
     if (me.role === 'admin') daftar = (await api('sekolah')).sekolah;
     rows.forEach(r => { NUM.forEach(k => r[k] = +r[k] || 0); r.bulan = normBulan(r.bulan); });
     agg.forEach(r => { r.bulan = normBulan(r.bulan); });
@@ -298,21 +302,35 @@ async function loadData() {
 }
 
 function calc() {
-  const n = k => parseInt(f[k].value) || 0;
-  $('#belumBaca').value = f.islam.value === '' ? '' : n('islam') - n('bisaBaca');
+  let I = 0, B = 0;
+  document.querySelectorAll('#grid tr[data-k]').forEach(tr => {
+    const a = tr.querySelector('[data-f=islam]'), b = tr.querySelector('[data-f=bisa]');
+    const i = parseInt(a.value) || 0, bb = parseInt(b.value) || 0;
+    tr.querySelector('.belum').textContent = a.value === '' && b.value === '' ? '' : i - bb;
+    tr.classList.toggle('bad', bb > i);
+    I += i; B += bb;
+  });
+  if ($('#tI')) { $('#tI').textContent = I; $('#tB').textContent = B; $('#tN').textContent = I - B; }
 }
 f.addEventListener('input', calc);
-f.bulan.addEventListener('change', isiForm); f.kelas.addEventListener('change', isiForm);
+f.bulan.addEventListener('change', isiForm);
 f.onsubmit = async e => {
   e.preventDefault();
-  const islam = parseInt(f.islam.value) || 0, bisaBaca = parseInt(f.bisaBaca.value) || 0;
-  if (bisaBaca > islam) return toast('Jumlah yang bisa tidak boleh melebihi jumlah siswa beragama Islam.', 1);
+  const items = [], bln = f.bulan.value;
+  for (const tr of document.querySelectorAll('#grid tr[data-k]')) {
+    const a = tr.querySelector('[data-f=islam]').value, b = tr.querySelector('[data-f=bisa]').value, k = tr.dataset.k;
+    if (a === '' && b === '') continue;
+    if (a === '' || b === '') return toast('Kelas ' + k + ': isi kedua kolom (siswa beragama Islam dan bisa baca).', 1);
+    const i = parseInt(a), bb = parseInt(b);
+    if (!(i >= 0) || !(bb >= 0)) return toast('Kelas ' + k + ': jumlah harus berupa angka 0 atau lebih.', 1);
+    if (bb > i) return toast('Kelas ' + k + ': jumlah yang bisa tidak boleh melebihi jumlah siswa beragama Islam.', 1);
+    items.push({ kelas: k, islam: i, bisaBaca: bb });
+  }
+  if (!items.length) return toast('Isi minimal satu kelas.', 1);
   try {
-    const bln = f.bulan.value;
-    await api('simpan', { bulan: bln, kelas: f.kelas.value.trim(), islam, bisaBaca });
-    toast('Data tersimpan.');
+    await api('simpanBulan', { bulan: bln, items });
+    toast('Data tersimpan (' + items.length + ' kelas).');
     $('#fy').value = bln.slice(0, 4); $('#fb').value = bln.slice(5, 7);
-    try { localStorage.setItem(prefKey(), f.kelas.value.trim()); } catch (_) {}
     await loadData();
     isiForm();
   } catch (err) { toast(why(err), 1); }
@@ -351,12 +369,12 @@ function render() {
   }).join('') : '<div class="empty">Belum ada data bulan ini.</div>';
 
   const gl = gurus.filter(g => !sel.value || g.sekolah === sel.value);
-  $('#gur').innerHTML = gl.length ? `<table><tr><th>Guru<th>Sekolah<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th>Capaian<th class="n">%</tr>` +
+  $('#gur').innerHTML = gl.length ? `<table><tr><th>Operator<th>Sekolah<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th>Capaian<th class="n">%</tr>` +
     gl.slice(0, 300).map(g => {
       const x = data.filter(r => String(r.username) === g.username), i = sum(x, 'islam'), b = sum(x, 'bisaBaca');
       return x.length ? `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td>${esc(x.map(r => r.kelas).join(', '))}<td class="n">${i}<td class="n">${b}<td style="min-width:140px">${bar(b, i - b)}<td class="n">${pct(b, i)}%</tr>`
         : `<tr><td>${esc(g.nama)}<td>${esc(g.sekolah)}<td colspan="5" class="mut">Belum mengisi pada bulan ini</tr>`;
-    }).join('') + '</table>' + (gl.length > 300 ? `<p class="hint">Menampilkan 300 dari ${gl.length} guru. Pilih sekolah untuk melihat semua.</p>` : '') : '<div class="empty">Belum ada guru yang terdaftar.</div>';
+    }).join('') + '</table>' + (gl.length > 300 ? `<p class="hint">Menampilkan 300 dari ${gl.length} operator. Pilih sekolah untuk melihat semua.</p>` : '') : '<div class="empty">Belum ada operator yang terdaftar.</div>';
 
   const ss = schools.filter(s => !sel.value || s === sel.value);
   $('#sek').innerHTML = ss.length ? `<table><tr><th>Sekolah<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th>Capaian<th class="n">%</tr>` +
@@ -369,7 +387,7 @@ function render() {
   const btn = (r, op, t) => `<button class="btn ghost sm" type="button" data-k="${esc(r.key)}" data-op="${op}">${t}</button>`;
   const act = r => me.role === 'guru' ? btn(r, 'edit', 'Edit') + ' ' + btn(r, 'del', 'Hapus') : adm ? btn(r, 'del', 'Hapus') : '';
   const all = [...bySchool].sort((a, b) => b.bulan.localeCompare(a.bulan));
-  $('#all').innerHTML = all.length ? `<table><tr><th>Bulan<th>Sekolah<th>Guru<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th></tr>` +
+  $('#all').innerHTML = all.length ? `<table><tr><th>Bulan<th>Sekolah<th>Operator<th>Kelas<th class="n">Islam<th class="n">Bisa baca<th class="n">Belum baca<th></tr>` +
     all.slice(0, 300).map(r => `<tr><td>${fm(r.bulan)}<td>${esc(r.sekolah)}<td>${esc(r.guru)}<td>${esc(r.kelas)}<td class="n">${r.islam}<td class="n">${r.bisaBaca}<td class="n">${r.belumBaca}<td>${act(r)}</tr>`).join('') + '</table>' + (all.length > 300 ? `<p class="hint">Menampilkan 300 dari ${all.length} data. Pilih sekolah untuk mempersempit.</p>` : '')
     : '<div class="empty">Belum ada data.</div>';
 }
@@ -378,10 +396,11 @@ $('#all').onclick = async e => {
   const b = e.target.closest('button[data-k]'); if (!b) return;
   const r = rows.find(x => x.key === b.dataset.k); if (!r) return;
   if (b.dataset.op === 'edit') {
-    ['bulan', 'kelas', 'islam', 'bisaBaca'].forEach(k => f[k].value = r[k]); calc(); show('isi'); f.islam.focus();
-    toast('Data dimuat ke form. Ubah jumlahnya lalu klik Simpan data.');
+    f.bulan.value = r.bulan; isiForm(); show('isi');
+    const el = document.querySelector('#grid tr[data-k="' + CSS.escape(String(r.kelas)) + '"] [data-f=islam]'); if (el) el.focus();
+    toast('Data kelas ' + r.kelas + ' dimuat ke form. Ubah jumlahnya lalu klik Simpan data.');
   } else if (confirm('Hapus data ini?')) {
-    try { await api('hapus', { key: r.key }); toast('Data dihapus.'); await loadData(); } catch (err) { toast(why(err), 1); }
+    try { await api('hapus', { key: r.key }); toast('Data dihapus.'); await loadData(); isiForm(); } catch (err) { toast(why(err), 1); }
   }
 };
 
@@ -417,7 +436,7 @@ $('#pdf').onclick = () => {
 $('#csv').onclick = () => {
   const h = ['bulan', 'sekolah', 'guru', 'kelas', ...NUM];
   const q = v => '"' + String(v).replace(/"/g, '""') + '"';
-  const csv = [h.join(','), ...rows.map(r => h.map(k => q(r[k])).join(','))].join('\n');
+  const csv = [h.map(k => k === 'guru' ? 'operator' : k).join(','), ...rows.map(r => h.map(k => q(r[k])).join(','))].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv' }));
   a.download = 'rekap-baca-quran.csv'; a.click();
